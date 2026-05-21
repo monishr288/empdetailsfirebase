@@ -35,189 +35,139 @@ Registeration Number : 212223220061
 */
 ```
 ## MainActivity.java
-```JAVA
-package com.example.stdlogin;
+```
+package com.example.sqliteexample;
 
-import android.os.Bundle;
-import android.widget.ArrayAdapter;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ListView;
-import android.widget.Toast;
 
-import androidx.activity.EdgeToEdge;
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
 
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ValueEventListener;
-
-import java.util.ArrayList;
-import java.util.List;
+import android.database.Cursor;
+import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
+import android.widget.EditText;
+import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity {
 
-    EditText etName, etAge, etDept;
-    Button btnAdd, btnUpdate;
-    ListView listViewStudents;
+    EditText editUserID, editUserName, editPassword;
 
-    DatabaseReference databaseStudents;
-    List<Student> studentList;
-    String selectedStudentId = ""; // To hold ID for update/delete
+    DatabaseManager dbManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Firebase Reference
-        databaseStudents = FirebaseDatabase.getInstance().getReference("students");
+        editUserID = findViewById(R.id.editTextID);
+        editUserName = findViewById(R.id.editTextUserName);
+        editPassword = findViewById(R.id.editTextPassword);
 
-        // UI Initialization
-        etName = findViewById(R.id.etName);
-        etAge = findViewById(R.id.etAge);
-        etDept = findViewById(R.id.etDept);
-        btnAdd = findViewById(R.id.btnAdd);
-        btnUpdate = findViewById(R.id.btnUpdate);
-        listViewStudents = findViewById(R.id.listViewStudents);
-
-        studentList = new ArrayList<>();
-
-        // Add Student
-        btnAdd.setOnClickListener(v -> addStudent());
-
-        // Update Student
-        btnUpdate.setOnClickListener(v -> updateStudent());
-
-        // List Item Click (Populate fields for Edit/Delete)
-        listViewStudents.setOnItemClickListener((adapterView, view, i, l) -> {
-            Student student = studentList.get(i);
-            etName.setText(student.getName());
-            etAge.setText(student.getAge());
-            etDept.setText(student.getDepartment());
-            selectedStudentId = student.getStudentId();
-        });
-
-        // Long Click to Delete
-        listViewStudents.setOnItemLongClickListener((adapterView, view, i, l) -> {
-            Student student = studentList.get(i);
-            deleteStudent(student.getStudentId());
-            return true;
-        });
+        dbManager = new DatabaseManager(this);
+        dbManager.open();
     }
 
-    @Override
-    protected void onStart() {
-        super.onStart();
-        // READ: Listen for database changes
-        databaseStudents.addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                studentList.clear();
-                for (DataSnapshot postSnapshot : snapshot.getChildren()) {
-                    Student student = postSnapshot.getValue(Student.class);
-                    studentList.add(student);
-                }
-                // Display using simple adapter
-                ArrayAdapter<Student> adapter = new ArrayAdapter<>(MainActivity.this, android.R.layout.simple_list_item_1, studentList);
-                listViewStudents.setAdapter(adapter);
-            }
+    public void btnInsertPressed(View view) {
 
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) { }
-        });
+        dbManager.insert(
+                editUserName.getText().toString(),
+                editPassword.getText().toString()
+        );
+
+        Toast.makeText(this,
+                "Data Inserted Successfully",
+                Toast.LENGTH_SHORT).show();
     }
 
-    // CREATE
-    private void addStudent() {
-        String name = etName.getText().toString();
-        String age = etAge.getText().toString();
-        String dept = etDept.getText().toString();
+    public void btnFetchPressed(View view) {
 
-        if (!name.isEmpty()) {
-            String id = databaseStudents.push().getKey(); // Generate Unique ID
-            Student student = new Student(id, name, age, dept);
-            databaseStudents.child(id).setValue(student);
-            Toast.makeText(this, "Student Added", Toast.LENGTH_SHORT).show();
-            clearFields();
+        Cursor cursor = dbManager.fetch();
+
+        if (cursor.moveToFirst()) {
+
+            do {
+
+                String id = cursor.getString(0);
+                String name = cursor.getString(1);
+                String password = cursor.getString(2);
+
+                Log.i("DATABASE",
+                        "ID : " + id +
+                                " Name : " + name +
+                                " Password : " + password);
+
+            } while (cursor.moveToNext());
         }
-    }
-
-    // UPDATE
-    private void updateStudent() {
-        if (selectedStudentId.isEmpty()) return;
-
-        String name = etName.getText().toString();
-        String age = etAge.getText().toString();
-        String dept = etDept.getText().toString();
-
-        DatabaseReference dR = FirebaseDatabase.getInstance().getReference("students").child(selectedStudentId);
-        Student student = new Student(selectedStudentId, name, age, dept);
-        dR.setValue(student);
-        Toast.makeText(this, "Student Updated", Toast.LENGTH_SHORT).show();
-        clearFields();
-    }
-
-    // DELETE
-    private void deleteStudent(String id) {
-        DatabaseReference dR = FirebaseDatabase.getInstance().getReference("students").child(id);
-        dR.removeValue();
-        Toast.makeText(this, "Student Deleted", Toast.LENGTH_SHORT).show();
-        clearFields();
-    }
-
-    private void clearFields() {
-        etName.setText("");
-        etAge.setText("");
-        etDept.setText("");
-        selectedStudentId = "";
     }
 }
 ```
-## Student.java :
-```JAVA
-package com.example.stdlogin;
+## activity_main.xml :
+```
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
 
-public class Student {
-    String studentId;
-    String name;
-    String age;
-    String department;
+    <EditText
+        android:id="@+id/editTextID"
+        android:layout_width="220dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="212dp"
+        android:hint="Enter User ID"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.502"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
-    // Default constructor required for calls to DataSnapshot.getValue(Student.class)
-    public Student() {
-    }
+    <EditText
+        android:id="@+id/editTextUserName"
+        android:layout_width="220dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:hint="Enter User Name"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.497"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/editTextID" />
 
-    public Student(String studentId, String name, String age, String department) {
-        this.studentId = studentId;
-        this.name = name;
-        this.age = age;
-        this.department = department;
-    }
+    <EditText
+        android:id="@+id/editTextPassword"
+        android:layout_width="220dp"
+        android:layout_height="wrap_content"
+        android:hint="Enter Password"
+        android:inputType="textPassword"
+        app:layout_constraintTop_toBottomOf="@id/editTextUserName"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
 
-    public String getStudentId() { return studentId; }
-    public String getName() { return name; }
-    public String getAge() { return age; }
-    public String getDepartment() { return department; }
+    <Button
+        android:id="@+id/buttonInsert"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Insert"
+        android:onClick="btnInsertPressed"
+        app:layout_constraintTop_toBottomOf="@id/editTextPassword"
+        app:layout_constraintStart_toStartOf="parent"/>
 
-    @Override
-    public String toString() {
-        return name + " (" + department + ") - Age: " + age;
-    }
-}
+    <Button
+        android:id="@+id/buttonFetch"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Fetch"
+        android:onClick="btnFetchPressed"
+        app:layout_constraintTop_toBottomOf="@id/editTextPassword"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
 ```
 
 ## OUTPUT
 
-
-### APP :
-<img src="./imgs/image.png" height=400>
+<img width="1834" height="948" alt="image" src="https://github.com/user-attachments/assets/c1d88bce-dd95-412b-8f5f-56e3e8e8d94e" />
 
 
 
