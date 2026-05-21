@@ -164,10 +164,111 @@ public class MainActivity extends AppCompatActivity {
 
 </androidx.constraintlayout.widget.ConstraintLayout>
 ```
+## DatabaseHelper.java
+```
+package com.example.sqliteexample;
+
+
+
+
+import android.content.Context;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
+
+public class DatabaseHelper extends SQLiteOpenHelper {
+
+    static final String DATABASE_NAME = "USERDB";
+    static final int DATABASE_VERSION = 1;
+
+    static final String TABLE_NAME = "USERS";
+    static final String USER_ID = "_id";
+    static final String USER_NAME = "username";
+    static final String USER_PASSWORD = "password";
+
+    static final String CREATE_TABLE =
+            "CREATE TABLE " + TABLE_NAME +
+                    " (" +
+                    USER_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    USER_NAME + " TEXT, " +
+                    USER_PASSWORD + " TEXT);";
+
+    public DatabaseHelper(Context context) {
+        super(context, DATABASE_NAME, null, DATABASE_VERSION);
+    }
+
+    @Override
+    public void onCreate(SQLiteDatabase db) {
+        db.execSQL(CREATE_TABLE);
+    }
+
+    @Override
+    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_NAME);
+        onCreate(db);
+    }
+}
+```
+## DatabaseManager.java
+```
+package com.example.sqliteexample;
+
+
+import android.content.ContentValues;
+import android.content.Context;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+
+public class DatabaseManager {
+
+    private DatabaseHelper dbHelper;
+    private Context context;
+    private SQLiteDatabase database;
+
+    public DatabaseManager(Context c) {
+        context = c;
+    }
+
+    public DatabaseManager open() {
+        dbHelper = new DatabaseHelper(context);
+        database = dbHelper.getWritableDatabase();
+        return this;
+    }
+
+    public void insert(String name, String password) {
+
+        ContentValues contentValues = new ContentValues();
+
+        contentValues.put(DatabaseHelper.USER_NAME, name);
+        contentValues.put(DatabaseHelper.USER_PASSWORD, password);
+
+        database.insert(DatabaseHelper.TABLE_NAME, null, contentValues);
+    }
+
+    public Cursor fetch() {
+
+        String[] columns = {
+                DatabaseHelper.USER_ID,
+                DatabaseHelper.USER_NAME,
+                DatabaseHelper.USER_PASSWORD
+        };
+
+        return database.query(
+                DatabaseHelper.TABLE_NAME,
+                columns,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+    }
+}
+```
 
 ## OUTPUT
 
 <img width="1834" height="948" alt="image" src="https://github.com/user-attachments/assets/c1d88bce-dd95-412b-8f5f-56e3e8e8d94e" />
+<img width="1811" height="948" alt="image" src="https://github.com/user-attachments/assets/42824f4b-5b2c-45d2-a059-35325a097537" />
 
 
 
